@@ -7,96 +7,77 @@ const request = require("request");
 const fs = require("fs");
 const spotify = new Spotify(keys.spotify);
 
-let getArtistName = (artist) => {
-  return artist.name;
- };
- let getSpotify = (songName) => {
-  if (songName === undefined) {
-    songName = "The Sign";
-  }
-
-  spotify.search(
-    {
-      type: "track",
-      query: songName
-    },
-    (err, data)=> {
-      if (err) {
-        console.log("Error occurred: " + err);
-        return;
-      }
-      let songs = data.tracks.items;
-
-      for (let i = 0; i < songs.length; i++) {
-        console.log(i);
-        console.log("Artist: " + songs[i].artists.map(getArtistName));
-        console.log("Song Title: " + songs[i].name);
-        console.log("Preview: " + songs[i].preview_url);
-        console.log("Album: " + songs[i].album.name);
-        console.log("*   *   *   *   *   *");
-        fs.appendFile('log.txt', "\n" + "\n" + 'SPOTIFY THIS SONG: ' + i + "\n" + "Artist: " + songs[i].artists.map(getArtistName) + "\n" + "Song Title: " + songs[i].name + "\n" + "Preview: " + songs[i].preview_url + "\n" + "Album: " + songs[i].album.name +  "\n" + "Album: " + songs[i].album.name, (err) => {
-          if (err) throw err;
-        });
-      }
-    }
-  );
+let tweetGet = function () {
+    return client.get('statuses/user_timeline', {
+        screen_name: 'BootcampH',
+        count: 20
+    }, function (error, tweets, response) {
+        if (!error) {
+            let resultArr = ["RT if you're excited for this #BroncosDraft class' debut on Saturday"];
+            for (var i = 0; i < tweets.length; i++) {
+                resultArr.push(`SCREEN NAME:    ${tweets[i].user.screen_name}     TWEET TEXT:    ${tweets[i].text}      TIME POSTED:      ${tweets[i].created_at}`)
+            }
+            fs.appendFileSync('./log.txt', JSON.stringify([process.argv[2], resultArr], null, 2), 'utf8');
+            return console.log(JSON.stringify(resultArr, null, 2));
+        }
+    })
 };
-let myTweets = ()=> {
- let client = new Twitter(keys.twitter);
 
-  let params = {
-    screen_name: "LevyTX"
+exports.tweetGet = tweetGet;
+
+async function spotifySearch(arg) {
+  if (process.argv[3] === undefined) {
+    return console.log("Please search for a song. node liri.js spotify-this-song 'yo diggity'");
+  }
+  let results = await spotify.search({query: encodeURIComponent(arg.trim()), type:'track', limit:1});
+  if (results.tracks.items.length < 1) {
+    return console.log("No spotify song found.");
   };
-  client.get("statuses/user_timeline", params, (error, tweets, response) => {
-    if (!error) {
-      for (let i = 0; i < tweets.length; i++) {
-        console.log(tweets[i].created_at);
-        console.log("");
-        console.log(tweets[i].text);
-        fs.appendFile('log.txt', "\n" + "\n" + 'MY TWEETS: ' + "\n" + tweets[i].created_at + "\n" + tweets[i].text + "\n-----------", function (err) {
-          if (err) throw err;
-        });
-      }
+  let returnObj = {
+    "Artist(s)": "",
+    "Track Name": results.tracks.items[0].name,
+    "Preview Link": results.tracks.items[0].preview_url,
+    "Album": results.tracks.items[0].album.name
+  };
+  for (var i = 0; i < results.tracks.items[0].artists.length; i++) {
+    if (i == results.tracks.items[0].artists.length-1) {
+      returnObj["Artist(s)"] += results.tracks.items[0].artists[i].name
     }
-  });
-};
-let movieThis = (movieName) => {
-  if (movieName === undefined) {
-    movieName = "Crash";
+    else {
+      returnObj["Artist(s)"] += results.tracks.items[0].artists[i].name + ", "
+    }
+  };
+  if (returnObj["Preview Link"] == null) {
+    returnObj["Preview Link"] = results.tracks.items[0].external_urls.spotify
+  };
+  fs.appendFileSync('./log.txt', JSON.stringify([`${process.argv[2]} -- ${process.argv[3]}`,returnObj], null, 2), 'utf8');
+  return console.log(returnObj);
+}
+
+exports.spotifySearch = spotifySearch;
+
+let movieGet = async (arg) => {
+  try {
+    const url=`https://www.omdbapi.com/?apikey=c146198=${arg}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    let resultObj = {
+      "Title": result.Title,
+      "Year": result.Year,
+      "IMDB Rating": result.Ratings[0].Value,
+      "Rotten Tomatos Rating": result.Ratings[1].Value,
+      "Production Country": result.Country,
+      "Plot": result.Plot,
+      "Acotors": result.Actors
+    };
+    fs.appendFileSync('./log.txt', JSON.stringify([process.argv[2] + " -- " + process.argv[3], resultObj], null, 2), 'utf8');
+    return console.log(JSON.stringify(resultObj, null, 2));
+  } catch (error) {
+    if (process.argv[3] === undefined) {
+      return console.log('Please search for a movie. node liri.js movie-this "crash"');
+    }
+    return console.log(error);
   }
-
-  let movieData = "http://www.omdbapi.com/?t=" + movieName + "&y=&plot=full&tomatoes=true&apikey=454a6e93";
-
-  request(movieData, (error, response, body) => {
-    if (!error && response.statusCode === 200) {
-      let jsonData = JSON.parse(body);
-
-      console.log("\nTitle: " + jsonData.Title);
-      console.log("\nYear: " + jsonData.Year);
-      console.log("\nRated: " + jsonData.Rated);
-      console.log("\nIMDB Rating: " + jsonData.imdbRating);
-      console.log("\nCountry: " + jsonData.Country);
-      console.log("\nLanguage: " + jsonData.Language);
-      console.log("\nPlot: " + jsonData.Plot);
-      console.log("\nActors: " + jsonData.Actors);
-      console.log("\nRotten Tomatoes Rating: " + jsonData.Ratings[1].Value);
-      fs.appendFile('log.txt', "\n" + "\n" + 'MOVIE THIS: ' + "\nTitle: " + jsonData.Title + "\nYear: " + jsonData.Year + "\nRated: " + jsonData.Rated + "\nIMDB Rating: " + jsonData.imdbRating + "\nCountry: " + jsonData.Country + "\nLanguage: " + jsonData.Language + "\nPlot: " + jsonData.Plot + "\nActors: " + jsonData.Actors + "\nRotten Tomatoes Rating: " + jsonData.Ratings[1].Value, (err) => {
-        if (err) throw err;
-      });
-    }
-  });
 };
-var doWhatItSays = function() {
-  //node modul reads texts from random.tx 
-  fs.readFile("random.txt", "utf8", function(error, data) {
-    console.log(data);
-  //splits data into two arrays at the ","
-    var dataArr = data.split(",");
-    if (dataArr.length == 2) {
-      pick(dataArr[0], dataArr[1]);
-    }
-    else if (dataArr.length == 1) {
-      pick(dataArr[0]);
-    }
-  });
-};
+
+exports.movieGet = movieGet
