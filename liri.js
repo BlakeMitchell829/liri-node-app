@@ -7,7 +7,7 @@ const request = require("request");
 const fs = require("fs");
 const spotify = new Spotify(keys.spotify);
 
-let tweetGet = function () {
+const tweetGet = function () {
     return client.get('statuses/user_timeline', {
         screen_name: 'BootcampH',
         count: 20
@@ -23,17 +23,17 @@ let tweetGet = function () {
     })
 };
 
-exports.tweetGet = tweetGet;
+exports.tweetGet = tweetGet();
 
-async function spotifySearch(arg) {
+const spotifySearch = function () {
   if (process.argv[3] === undefined) {
     return console.log("Please search for a song. node liri.js spotify-this-song 'yo diggity'");
   }
-  let results = await spotify.search({query: encodeURIComponent(arg.trim()), type:'track', limit:1});
+  const results = spotify.search({query: encodeURIComponent(arg.trim()), type:'track', limit:1});
   if (results.tracks.items.length < 1) {
     return console.log("No spotify song found.");
   };
-  let returnObj = {
+  const returnObj = {
     "Artist(s)": "",
     "Track Name": results.tracks.items[0].name,
     "Preview Link": results.tracks.items[0].preview_url,
@@ -54,13 +54,13 @@ async function spotifySearch(arg) {
   return console.log(returnObj);
 }
 
-exports.spotifySearch = spotifySearch;
+exports.spotifySearch = spotifySearch();
 
-let movieGet = async (arg) => {
+const movieGet = function() {
   try {
-    const url=`https://www.omdbapi.com/?apikey=c146198=${arg}`;
-    const response = await fetch(url);
-    const result = await response.json();
+    const url=`https://www.omdbapi.com/?apikey=454a6e93=${arg}`;
+    const response = fetch(url);
+    const result = response.json();
     let resultObj = {
       "Title": result.Title,
       "Year": result.Year,
@@ -80,4 +80,4 @@ let movieGet = async (arg) => {
   }
 };
 
-exports.movieGet = movieGet
+exports.movieGet = movieGet();
