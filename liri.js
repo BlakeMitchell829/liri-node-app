@@ -6,6 +6,7 @@ const keys = require("./keys");
 const request = require("request");
 const fs = require("fs");
 const spotify = new Spotify(keys.spotify);
+const client = new Twitter(keys.twitter);
 
 const tweetGet = function () {
     return client.get('statuses/user_timeline', {
